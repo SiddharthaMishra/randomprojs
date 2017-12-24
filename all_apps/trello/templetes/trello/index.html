@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+
+<h1>List of boards</h1>
+
+{% if object_list %}
+    <ul>
+    {% for board in object_list %}
+        <li>
+            <a href="{% url 'board' board.id %}">
+                {{ board.board_name }}
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No boards found</p>
+{% endif %}

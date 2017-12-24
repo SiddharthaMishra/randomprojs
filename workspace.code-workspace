@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+    "settings": {
+        "python.pythonPath": "/home/sid/.virtualenvs/allProjs-q16jJyr4/bin/python3.5"
+    }
+}

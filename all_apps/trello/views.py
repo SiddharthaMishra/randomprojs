@@ -45,6 +45,8 @@ def add_column(request, board_no):
     q.save()
     return HttpResponse("<div class='column' id='col_"+str(q.id)+"'><h2 class='listName'>"+text+"</h2></div>")
 
-
-
-
+def add_board(request):
+    text = request.POST['text']
+    q = Board(board_name=text)
+    q.save()
+    return HttpResponse("<li><a href="+str(q.id)+">"+text+"</a></li")

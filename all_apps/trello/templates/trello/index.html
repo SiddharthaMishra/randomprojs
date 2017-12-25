@@ -1,17 +1,78 @@
 <!DOCTYPE html>
 
-<h1>List of boards</h1>
+{% load static %}
 
-{% if object_list %}
-    <ul>
-    {% for board in object_list %}
-        <li>
-            <a href="{% url 'board' board.id %}">
-                {{ board.board_name }}
-            </a>
-        </li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No boards found</p>
-{% endif %}
+<html>
+    <head>
+        <link rel="stylesheet" href="{% static 'trello/board/style.css' %}">
+        <script type="text/javascript" src="{% static 'jquery-3.2.1.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'jquery-ui.min.js'%}"></script>
+        <script>
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }        
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+                    }
+                }
+            });
+
+        </script>
+
+    </head>
+
+    <body>
+        <h1>List of boards</h1>
+        {% if object_list %}
+            <ul id="boards">
+            {% for board in object_list %}
+                <li>
+                    <a href="{% url 'board' board.id %}">
+                        {{ board.board_name }}
+                    </a>
+                </li>
+            {% endfor %}
+            </ul>
+            <br><br>
+            <h3>Add board</h3><br>
+            <input type="text" id="add_b" placeholder="board name"><br>
+            <button id="sub_b">Add board</button>
+        {% else %}
+            <p>No boards found</p>
+        {% endif %}
+    <script>
+        $("#sub_b").click(function() {
+            $.ajax({
+                url: 'add_board/',
+                type: "POST",
+                data: {
+                    text: $("#add_b").val() ,
+                },
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                success: function(response) {
+                    $("#boards").append(response);
+                }
+            })
+            $("#add_b").val("");
+        })
+    </script>
+    </body>
+</html>

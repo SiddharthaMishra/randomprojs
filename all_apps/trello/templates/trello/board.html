@@ -2,221 +2,222 @@
 
 {% load static %}
 
-<head>
-    <link rel="stylesheet" href="{% static 'trello/board/style.css' %}">
-    <script type="text/javascript" src="{% static 'jquery-3.2.1.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'jquery-ui.min.js'%}"></script>
-    <script>
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = jQuery.trim(cookies[i]);
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
+<html>
+    <head>
+        <link rel="stylesheet" href="{% static 'trello/board/style.css' %}">
+        <script type="text/javascript" src="{% static 'jquery-3.2.1.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'jquery-ui.min.js'%}"></script>
+        <script>
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = jQuery.trim(cookies[i]);
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
                     }
                 }
+                return cookieValue;
+            }        
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
             }
-            return cookieValue;
-        }        
-        function csrfSafeMethod(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+                    }
                 }
-            }
-        });
+            });
 
-    </script>
+        </script>
 
-</head>
+    </head>
 
-<body>
-    <h1> {{ object.board_name }} </h1>
-    <br><br>
-    {% for tasklist in object.tasklist_set.all %}
-    <div class='column' id='col_{{ tasklist.id }}'>
-        
-        <h2 class="listName">{{ tasklist.tasklist_name }}</h2>
-        <br>
-        
-        {% for task in tasklist.task_set.all|dictsort:"pos_in_list" %}
-        <div class="task" id='item_{{ task.id }}'>
-            {{ task.task_text }}
-            <input type="checkbox" class="check" id="check_{{ task.id }}" 
-            {% if task.task_enabled %}
-                checked
-            {% endif %}>
+    <body>
+        <h1> {{ object.board_name }} </h1>
+        <br><br>
+        {% for tasklist in object.tasklist_set.all %}
+        <div class='column' id='col_{{ tasklist.id }}'>
+            
+            <h2 class="listName">{{ tasklist.tasklist_name }}</h2>
+            <br>
+            
+            {% for task in tasklist.task_set.all|dictsort:"pos_in_list" %}
+            <div class="task" id='item_{{ task.id }}'>
+                {{ task.task_text }}
+                <input type="checkbox" class="check" id="check_{{ task.id }}" 
+                {% if task.task_enabled %}
+                    checked
+                {% endif %}>
+            </div>
+            {% endfor %}
+            
+            <input type="text" class="inputText" id="t_{{ tasklist.id }}" placeholder="Write task here" >
+            
+            <button class="addTask" id='add_{{ tasklist.id }}'>add a card</button>
+            
+            <button class="sub" id='sub_{{ tasklist.id }}'>submit</button>
+            <button class="canc" id='canc_{{ tasklist.id }}'>cancel</button>
         </div>
         {% endfor %}
-        
-        <input type="text" class="inputText" id="t_{{ tasklist.id }}" placeholder="Write task here" >
-        
-        <button class="addTask" id='add_{{ tasklist.id }}'>add a card</button>
-        
-        <button class="sub" id='sub_{{ tasklist.id }}'>submit</button>
-        <button class="canc" id='canc_{{ tasklist.id }}'>cancel</button>
-    </div>
-    {% endfor %}
 
-    <div class="column">
-        <h2 class="listName">Add Column</h2>
-        <br>
-        <div style="text-align:center">        
-            <input type="text" id="add_col" placeholder="add column">
-            <br><br><br>
-            <button id="sub_col">Submit</button>
+        <div class="column">
+            <h2 class="listName">Add Column</h2>
+            <br>
+            <div style="text-align:center">        
+                <input type="text" id="add_col" placeholder="add column">
+                <br><br><br>
+                <button id="sub_col">Submit</button>
+            </div>
         </div>
-    </div>
 
-    <script>
-        $(document).ready(function() {
-            $(".task").each(function() {
-                var num = this.id.slice(5);
-                var text = "#check_" + num;
-                if($(text).is(":checked")) {
-                    $(this).css("background-color", "blue");
-                } else{
-                    $(this).css("background-color", "grey");
-                }  
-            })
-            $(".column" ).sortable({
-                helper: 'clone',
-                items: ':not(.listName, .sub, .canc, .addTask, .inputText)',
-                connectWith: '.column',
-                update: function(event, ui) {
-                    if (!ui.sender && this === ui.item.parent()[0]) {
-                        var a = ($(this).sortable("serialize"));
-                        console.log(this.id);
-                        a = "colID=" + (this.id) + "&" + a
-                        console.log(a);
+        <script>
+            $(document).ready(function() {
+                $(".task").each(function() {
+                    var num = this.id.slice(5);
+                    var text = "#check_" + num;
+                    if($(text).is(":checked")) {
+                        $(this).css("background-color", "blue");
+                    } else{
+                        $(this).css("background-color", "grey");
+                    }  
+                })
+                $(".column" ).sortable({
+                    helper: 'clone',
+                    items: ':not(.listName, .sub, .canc, .addTask, .inputText)',
+                    connectWith: '.column',
+                    update: function(event, ui) {
+                        if (!ui.sender && this === ui.item.parent()[0]) {
+                            var a = ($(this).sortable("serialize"));
+                            console.log(this.id);
+                            a = "colID=" + (this.id) + "&" + a
+                            console.log(a);
+                            $.ajax({
+                                url: 'changePos/',
+                                type: 'POST',
+                                data: a,
+                                csrfmiddlewaretoken: '{{ csrf_token }}',
+                            })
+                            
+                        }
+                    },
+                    receive: function(event, ui) {
+                        var col1 = ($(this).sortable("serialize"));
+                        var col2= $(ui.sender).sortable("serialize");
+                        
+                        col1 = "colID=" + (this.id) + "&" + col1
+                        col2 = "colID=" + (ui.sender.attr('id')) + "&" + col2
+                        console.log(col1);
+                        console.log(col2);
+
                         $.ajax({
                             url: 'changePos/',
                             type: 'POST',
-                            data: a,
+                            data: col1,
                             csrfmiddlewaretoken: '{{ csrf_token }}',
                         })
-                        
-                    }
-                },
-                receive: function(event, ui) {
-                    var col1 = ($(this).sortable("serialize"));
-                    var col2= $(ui.sender).sortable("serialize");
+
+                        $.ajax({
+                            url: 'changePos/',
+                            type: 'POST',
+                            data: col2,
+                            csrfmiddlewaretoken: '{{ csrf_token }}',
+                        })
+                    },
+                });
+                $( ".addTask" ).click(function() {
+                    $(this).hide();
+                    var num = this.id.slice(4);
+                    var text = "#t_" + num;
+                    $(text).show();
+                    text = "#canc_" + num;
+                    $(text).show();
+                    text = "#sub_" + num;
+                    $(text).show();
+                })
+                $( ".canc" ).click(function() {
+                    var num = this.id.slice(5);
+                    var text = "#t_" + num;
+                    $(text).hide();
+                    text = "#canc_" + num;
+                    $(text).hide();
+                    text = "#sub_" + num;
+                    $(text).hide();
+                    text = "#add_" + num;
+                    $(text).show();
+                })
+
+                $( ".sub" ).click(function() {
+                    var num = this.id.slice(4);
+                    var text = "#t_" + num;
+                    $( text ).hide();
+
+                    var toAdd = $(text).val();
+
+                    $.ajax({
+                        url: 'addTask/',
+                        type: "POST",
+                        data: {
+                            text: toAdd,
+                            colID: num,
+                        },
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                        success: function(response) {
+                            $(response).insertBefore($("#t_"+num));
+                        },
+                    })        
                     
-                    col1 = "colID=" + (this.id) + "&" + col1
-                    col2 = "colID=" + (ui.sender.attr('id')) + "&" + col2
-                    console.log(col1);
-                    console.log(col2);
+                    $(text).val("");
 
-                    $.ajax({
-                        url: 'changePos/',
-                        type: 'POST',
-                        data: col1,
-                        csrfmiddlewaretoken: '{{ csrf_token }}',
-                    })
-
-                    $.ajax({
-                        url: 'changePos/',
-                        type: 'POST',
-                        data: col2,
-                        csrfmiddlewaretoken: '{{ csrf_token }}',
-                    })
-                },
-            });
-            $( ".addTask" ).click(function() {
-                $(this).hide();
-                var num = this.id.slice(4);
-                var text = "#t_" + num;
-                $(text).show();
-                text = "#canc_" + num;
-                $(text).show();
-                text = "#sub_" + num;
-                $(text).show();
-            })
-            $( ".canc" ).click(function() {
-                var num = this.id.slice(5);
-                var text = "#t_" + num;
-                $(text).hide();
-                text = "#canc_" + num;
-                $(text).hide();
-                text = "#sub_" + num;
-                $(text).hide();
-                text = "#add_" + num;
-                $(text).show();
-            })
-
-            $( ".sub" ).click(function() {
-                var num = this.id.slice(4);
-                var text = "#t_" + num;
-                $( text ).hide();
-
-                var toAdd = $(text).val();
-
-                $.ajax({
-                    url: 'addTask/',
-                    type: "POST",
-                    data: {
-                        text: toAdd,
-                        colID: num,
-                    },
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
-                    success: function(response) {
-                        $(response).insertBefore($("#t_"+num));
-                    },
-                })        
-                
-                $(text).val("");
-
-                text = "#canc_" + num;
-                $(text).hide();
-                text = "#sub_" + num;
-                $(text).hide();
-                text = "#add_" + num;
-                $(text).show();
-            })
-
-
-            $(".check").change(function() {
-
-                var num = this.id.slice(6);
-                var text = "#item_" + num;
-                if(this.checked) {
-                    $(text).css("background-color", "blue");
-                } else{
-                    $(text).css("background-color", "grey");
-                }
-                $.ajax({
-                    url: 'active/',
-                    type: "POST",
-                    data: {
-                        pk: num,
-                    },
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    text = "#canc_" + num;
+                    $(text).hide();
+                    text = "#sub_" + num;
+                    $(text).hide();
+                    text = "#add_" + num;
+                    $(text).show();
                 })
-            })
 
-            $(" #sub_col ").click(function() {
-                var numItems = $('.column').length
-                $.ajax({
-                    url: 'add_col/',
-                    type: "POST",
-                    data: {
-                        text: $("#add_col").val() ,
-                    },
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
-                    success: function(response) {
-                        $(response).insertBefore($(".column").last());
+
+                $(".check").change(function() {
+
+                    var num = this.id.slice(6);
+                    var text = "#item_" + num;
+                    if(this.checked) {
+                        $(text).css("background-color", "blue");
+                    } else{
+                        $(text).css("background-color", "grey");
                     }
+                    $.ajax({
+                        url: 'active/',
+                        type: "POST",
+                        data: {
+                            pk: num,
+                        },
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                    })
+                })
+
+                $(" #sub_col ").click(function() {
+                    $.ajax({
+                        url: 'add_col/',
+                        type: "POST",
+                        data: {
+                            text: $("#add_col").val() ,
+                        },
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                        success: function(response) {
+                            $(response).insertBefore($(".column").last());
+                        }
+                    })
+                    $("#add_col").val("");
                 })
             })
-        })
-    </script>
-</body>
-
+        </script>
+    </body>
+</html>

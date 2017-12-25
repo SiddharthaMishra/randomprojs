@@ -15,16 +15,36 @@ class BoardView(generic.DetailView):
 def change_pos(request, board_no):
     board = get_object_or_404(Board, pk=board_no)
     col = board.tasklist_set.get(pk=int(request.POST['colID'][4:]))
-    print(col.pk)
-    print(request.POST.get('item[]'))
-
-    for index, taskID in enumerate(request.POST.get('item[]')):
-      #  print(index)
+    for index, taskID in enumerate(request.POST.getlist('item[]')):
         task = Task.objects.get(pk=taskID) 
         task.pos_in_list = index
         task.Tasklist = col
         task.save()
-
     return HttpResponse('done')
+
+def add_task(request, board_no):
+    board = get_object_or_404(Board, pk=board_no)
+    col = board.tasklist_set.get(pk=int(request.POST['colID']))
+    pos = col.task_set.all().count()
+    text = request.POST['text']
+    q = Task(Tasklist=col, task_text=text, pos_in_list = pos )
+    q.save()
+    return HttpResponse("<div class='task' id='item_"+str(q.id)+"'>"+text+"</div>")
+
+def active(request, board_no):
+    taskno = int(request.POST['pk'])
+    q = Task.objects.get(pk=taskno)
+    q.task_enabled = not q.task_enabled
+    q.save()
+    return HttpResponse("success")
+
+def add_column(request, board_no):
+    board = get_object_or_404(Board, pk=board_no)
+    text = request.POST['text']
+    q = Tasklist(Board=board, tasklist_name=text)
+    q.save()
+    return HttpResponse("<div class='column' id='col_"+str(q.id)+"'><h2 class='listName'>"+text+"</h2></div>")
+
+
 
 

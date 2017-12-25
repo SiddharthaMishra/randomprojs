@@ -6,5 +6,6 @@ from . import views
 
 urlpatterns = [
     path('', views.IndexView.as_view(), name = 'index'),
-    path('<int:pk>/', views.BoardView.as_view(), name = 'board')
+    path('<int:pk>/', views.BoardView.as_view(), name = 'board'),
+    path('<int:board_no>/changePos/', views.change_pos)
 ]

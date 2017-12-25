@@ -20,5 +20,6 @@ class Task(models.Model):
     Tasklist = models.ForeignKey(Tasklist, on_delete=models.CASCADE)
     task_text = models.CharField(max_length=50)
     task_enabled = models.BooleanField(default=True)
+    pos_in_list = models.IntegerField(default=0)
     def __str__(self):
         return self.task_text

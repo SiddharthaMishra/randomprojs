@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+{% load static %}
+
+<head>
+    <link rel="stylesheet" href="{% static 'trello/board/style.css' %}">
+    <script type="text/javascript" src="{% static 'jquery-3.2.1.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'jquery-ui.min.js'%}"></script>
+    <script>
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }        
+        function csrfSafeMethod(method) {
+            // these HTTP methods do not require CSRF protection
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+                }
+            }
+        });
+
+    </script>
+
+</head>
+
+<body>
+    <h1> {{ object.board_name }} </h1>
+    <br><br>
+    {% for tasklist in object.tasklist_set.all %}
+    <div class='column' id='col_{{ tasklist.id }}'>
+        <h4 class="listName">{{ tasklist.tasklist_name }}</h4>
+        {% for task in tasklist.task_set.all|dictsort:"pos_in_list" %}
+        <div class="task" id='item_{{ task.id }}'>{{ task.task_text }}</div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    <script>
+        $( ".column" ).sortable({
+            helper: 'clone',
+            items: ':not(.listName)',
+            connectWith: '.column',
+            update: function(event, ui) {
+                if (!ui.sender && this === ui.item.parent()[0]) {
+                    var a = ($(this).sortable("serialize"));
+                    console.log(this.id);
+                    a = "colID=" + (this.id) + "&" + a
+                    console.log(a);
+                    $.ajax({
+                        url: 'changePos/',
+                        type: 'POST',
+                        data: a,
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                    })
+                    
+                }
+            },
+            receive: function(event, ui) {
+                var col1 = ($(this).sortable("serialize"));
+                var col2= $(ui.sender).sortable("serialize");
+                
+                col1 = "colID=" + (this.id) + "&" + col1
+                col2 = "colID=" + (ui.sender.attr('id')) + "&" + col2
+                console.log(col1);
+                console.log(col2);
+
+                $.ajax({
+                    url: 'changePos/',
+                    type: 'POST',
+                    data: col1,
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                })
+
+                $.ajax({
+                    url: 'changePos/',
+                    type: 'POST',
+                    data: col2,
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                })
+            },
+        });
+
+    </script>
+</body>
+

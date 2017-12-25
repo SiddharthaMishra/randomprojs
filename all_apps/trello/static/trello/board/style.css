@@ -1,0 +1,15 @@
+h1 {
+    color: red;
+}
+
+.column {
+    border: 2px solid black;
+    width: 15%;
+    height: 200px;
+    float: left;
+    margin-left: 5%;
+}
+
+.task {
+    margin-bottom: 5%;
+}

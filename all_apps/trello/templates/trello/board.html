@@ -8,6 +8,8 @@
         <script type="text/javascript" src="{% static 'jquery-3.2.1.min.js' %}"></script>
         <script type="text/javascript" src="{% static 'jquery-ui.min.js'%}"></script>
         <script>
+
+            // To give the CSRF token to the AJAX requests
             function getCookie(name) {
                 var cookieValue = null;
                 if (document.cookie && document.cookie !== '') {
@@ -42,13 +44,11 @@
     <body>
         <h1> {{ object.board_name }} </h1>
         <br><br>
-        {% for tasklist in object.tasklist_set.all %}
-        <div class='column' id='col_{{ tasklist.id }}'>
-            
-            <h2 class="listName">{{ tasklist.tasklist_name }}</h2>
-            <br>
-            
-            {% for task in tasklist.task_set.all|dictsort:"pos_in_list" %}
+        {% for tasklist in object.tasklist_set.all %} 
+        <div class='column' id='col_{{ tasklist.id }}'>  
+            <h2 class="listName">{{ tasklist.tasklist_name }}</h2><br>  
+    
+            {% for task in tasklist.task_set.all|dictsort:"pos_in_list" %}          
             <div class="task" id='item_{{ task.id }}'>
                 {{ task.task_text }}
                 <input type="checkbox" class="check" id="check_{{ task.id }}" 
@@ -59,9 +59,7 @@
             {% endfor %}
             
             <input type="text" class="inputText" id="t_{{ tasklist.id }}" placeholder="Write task here" >
-            
             <button class="addTask" id='add_{{ tasklist.id }}'>add a card</button>
-            
             <button class="sub" id='sub_{{ tasklist.id }}'>submit</button>
             <button class="canc" id='canc_{{ tasklist.id }}'>cancel</button>
         </div>
@@ -80,49 +78,57 @@
         <script>
             $(document).ready(function() {
                 $(".task").each(function() {
-                    var num = this.id.slice(5);
-                    var text = "#check_" + num;
-                    if($(text).is(":checked")) {
+                    // changes initial colour of the tasks depending on if they're ticked
+                    var pk = this.id.slice(5);
+                    var checkID = "#check_" + pk;
+                    if($(checkID).is(":checked")) {
                         $(this).css("background-color", "blue");
                     } else{
                         $(this).css("background-color", "grey");
                     }  
                 })
-                $(".column" ).sortable({
-                    helper: 'clone',
-                    items: ':not(.listName, .sub, .canc, .addTask, .inputText)',
-                    connectWith: '.column',
-                    update: function(event, ui) {
-                        if (!ui.sender && this === ui.item.parent()[0]) {
-                            var a = ($(this).sortable("serialize"));
-                            console.log(this.id);
-                            a = "colID=" + (this.id) + "&" + a
-                            console.log(a);
-                            $.ajax({
+
+                $(".column" ).sortable({        
+                    //Makes all the objects of the ".column" class sortable
+                    // i.e, child objects can be dragged and dropped to change their positions
+                    
+                    helper: 'clone',    // creates a clone of the object when dragged instead of dragging the object itself
+                    items: ':not(.listName, .sub, .canc, .addTask, .inputText)',    // The heading, the buttons and the textbix should not be sortable
+                    connectWith: '.column',     // connects with other column of the same class, i.e can drag the task from one column to another
+                    update: function(event, ui) {   //  When a relative change is positions is detected 
+                        if (!ui.sender && this === ui.item.parent()[0]) {   //if the change is within the same column
+                            
+                            // Records the relative pos of tasks as an array and formats it to string which is compatible to being sent as a form request 
+                            var postString = ($(this).sortable("serialize"));   
+                            
+                            postString = "colID=" + (this.id).slice(4) + "&" + postString;   // Adds the colID as another parameter to the request
+                           
+                            $.ajax({        //Updates the database
                                 url: 'changePos/',
                                 type: 'POST',
-                                data: a,
+                                data: postString,
                                 csrfmiddlewaretoken: '{{ csrf_token }}',
                             })
                             
                         }
                     },
-                    receive: function(event, ui) {
-                        var col1 = ($(this).sortable("serialize"));
-                        var col2= $(ui.sender).sortable("serialize");
-                        
-                        col1 = "colID=" + (this.id) + "&" + col1
-                        col2 = "colID=" + (ui.sender.attr('id')) + "&" + col2
-                        console.log(col1);
-                        console.log(col2);
+                    receive: function(event, ui) {  // If task changes column
 
-                        $.ajax({
+                        // "Sortable" records the relative pos of tasks in the column as an array and formats it to a string which is compatible to being sent as a form request 
+                        var col1 = ($(this).sortable("serialize")); // The receiving column
+                        var col2= $(ui.sender).sortable("serialize");   // The sending column
+                        
+                        // Adds the colID as another parameter to the request
+                        col1 = "colID=" + (this.id).slice(4) + "&" + col1;
+                        col2 = "colID=" + (ui.sender.attr('id')).slice(4) + "&" + col2;
+
+                        //Updates the database
+                        $.ajax({    
                             url: 'changePos/',
                             type: 'POST',
                             data: col1,
                             csrfmiddlewaretoken: '{{ csrf_token }}',
                         })
-
                         $.ajax({
                             url: 'changePos/',
                             type: 'POST',
@@ -132,90 +138,117 @@
                     },
                 });
                 $( ".addTask" ).click(function() {
+                    // Should hide the clicked button and
+                    // show the corrosponding textbox, the submit button and the cancel button
+            
                     $(this).hide();
-                    var num = this.id.slice(4);
-                    var text = "#t_" + num;
-                    $(text).show();
-                    text = "#canc_" + num;
-                    $(text).show();
-                    text = "#sub_" + num;
-                    $(text).show();
+                    var pk = this.id.slice(4);      // gets the ID/primay key of the column by slicing the name
+                    
+                    var textboxID = "#t_" + pk;     // ID of textbox to be shown onclick
+                    $(textboxID).show();        
+                    var cancID = "#canc_" + pk;     // ID of the cancel button
+                    $(cancID).show();
+                    var subID = "#sub_" + pk;       // ID of the submit button
+                    $(subID).show();
                 })
                 $( ".canc" ).click(function() {
-                    var num = this.id.slice(5);
-                    var text = "#t_" + num;
-                    $(text).hide();
-                    text = "#canc_" + num;
-                    $(text).hide();
-                    text = "#sub_" + num;
-                    $(text).hide();
-                    text = "#add_" + num;
-                    $(text).show();
+                    //Should hide the textbox, the submit button and the cancel button. 
+                    //Should display the "add task" button
+                    var pk = this.id.slice(5);      // gets the ID/primay key of the column by slicing the name
+                    
+                    var textboxID = "#t_" + pk;     // ID of textbox to be shown onclick
+                    $(textboxID).hide();
+                    $(textboxID).val("");          // Clears the textbox
+
+                    var cancID = "#canc_" + pk;    // ID of canc button
+                    $(cancID).hide();
+
+                    var subID = "#sub_" + pk;      // ID of sub button 
+                    $(subID).hide();
+
+                    var addID = "#add_" + pk;      // ID of "add task" button
+                    $(addID).show();
                 })
 
                 $( ".sub" ).click(function() {
-                    var num = this.id.slice(4);
-                    var text = "#t_" + num;
-                    $( text ).hide();
+                    // creates a new task
+                    // sends an ajax request to store the new task 
+                    // and also creates a new div to display the contents from the HTTP response
 
-                    var toAdd = $(text).val();
+                    var pk = this.id.slice(4);  // gets the ID/primay key of the column by slicing the name
+                    
+                    var textboxID = "#t_" + pk;    
+                    $( textboxID ).hide();
 
-                    $.ajax({
+                    var toAdd = $(textboxID).val();  // The contents of the textbox
+
+                    $.ajax({                //To add the column in the database
                         url: 'addTask/',
                         type: "POST",
                         data: {
                             text: toAdd,
-                            colID: num,
+                            colID: pk,
                         },
                         csrfmiddlewaretoken: '{{ csrf_token }}',
-                        success: function(response) {
-                            $(response).insertBefore($("#t_"+num));
+                        success: function(response) {     
+                            //HTTP response returns a string of the HTML code required to create the new div
+                            
+                            $(response).insertBefore($("#t_"+pk));  //inserts the task in the required place
                         },
                     })        
                     
-                    $(text).val("");
+                    $(textboxID).val("");   // clears the textbox
 
-                    text = "#canc_" + num;
-                    $(text).hide();
-                    text = "#sub_" + num;
-                    $(text).hide();
-                    text = "#add_" + num;
-                    $(text).show();
+                    var cancID = "#canc_" + pk;         // ID of canc button
+                    $(cancID).hide();
+
+                    var subID = "#sub_" + pk;           // ID of submit button 
+                    $(subID).hide();
+
+                    var addID = "#add_" + pk;           // ID of "add task" button
+                    $(addID).show();
                 })
 
 
                 $(".check").change(function() {
+                    // To activate or deactivate the task when value of checkbox changed
 
-                    var num = this.id.slice(6);
-                    var text = "#item_" + num;
-                    if(this.checked) {
-                        $(text).css("background-color", "blue");
+                    var pk = this.id.slice(6);  // gets the ID/primay key of the column by slicing the name
+                    var taskID = "#item_" + pk; // id of the item/task which got changed
+                    
+                    if(this.checked) {          // To switch between the BG colour of the div 
+                        $(taskID).css("background-color", "blue");
                     } else{
-                        $(text).css("background-color", "grey");
+                        $(taskID).css("background-color", "grey");
                     }
-                    $.ajax({
+                    
+                    $.ajax({              // Updates the new value in the database
                         url: 'active/',
                         type: "POST",
                         data: {
-                            pk: num,
+                            pk: pk,
                         },
                         csrfmiddlewaretoken: '{{ csrf_token }}',
                     })
                 })
 
-                $(" #sub_col ").click(function() {
-                    $.ajax({
+                $(" #sub_col ").click(function() { 
+                    // To create a new column
+                    // sends an ajax request to store the new column 
+                    // and also creates a new div to display the contents from the HTTP response
+
+                    $.ajax({    
                         url: 'add_col/',
                         type: "POST",
                         data: {
-                            text: $("#add_col").val() ,
+                            text: $("#add_col").val() ,     //contents of the textbox 
                         },
                         csrfmiddlewaretoken: '{{ csrf_token }}',
                         success: function(response) {
-                            $(response).insertBefore($(".column").last());
+                            $(response).insertBefore($(".column").last());  //inserts new column
                         }
                     })
-                    $("#add_col").val("");
+                    $("#add_col").val("");  //clears the textbox
                 })
             })
         </script>

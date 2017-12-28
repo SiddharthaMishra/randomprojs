@@ -56,7 +56,15 @@ def add_column(request, board_no):
     text = request.POST['text']
     q = Tasklist(Board=board, tasklist_name=text)
     q.save()
-    return HttpResponse("<div class='column' id='col_"+str(q.id)+"'><h2 class='listName'>"+text+"</h2></div>")
+    return HttpResponse(
+                          '<div class="column" id="col_' + str(q.id) + '">'
+                        + "<h2 class='listName'>" + text + "</h2>"
+                        + '<input type="text" class="inputText" id="t_{{ tasklist.id }}" placeholder="Write task here" >'
+                        + '<button class="addTask" id="add_{{ tasklist.id }}">add a card</button>'
+                        + '<button class="sub" id="sub_{{ tasklist.id }}">submit</button>'
+                        + '<button class="canc" id="canc_{{ tasklist.id }}">cancel</button>'
+                        + '</div>'
+                        )
 
 def add_board(request):
     """ Adds new Board """
